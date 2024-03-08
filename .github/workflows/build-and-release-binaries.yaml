@@ -44,16 +44,12 @@ jobs:
             --add-data tt_flash/data/wormhole/fw_defines.yaml:tt_flash/data/wormhole/ \
             --add-data tt_flash/data/grayskull/fw_defines.yaml:tt_flash/data/grayskull/
 
-      # - name: Rename binary
-      #   run: |
-      #     mv dist/* "dist/tt_flash-${{RELEASE_TAG}}"
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: tt_flash
+          name: tt-flash
           path: |
-            ./dist/tt_flash*
+            ./dist/tt-flash
 
   # release:
   #   needs: build
