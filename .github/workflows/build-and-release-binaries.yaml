@@ -6,10 +6,13 @@ on:
     types: [published]
     tags:
       - 'v*' # Push events to matching v*, i.e. v1.0.0, v2.0.0, ...
-    
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ GITHUB_REF#refs/tags/v }}
     strategy:
       matrix:
         python-version: ['3.10']
@@ -45,14 +48,14 @@ jobs:
 
       - name: Rename binary
         run: |
-          mv dist/* "dist/tt_flash-${GITHUB_REF#refs/tags/v}"
+          mv dist/* "dist/tt_flash-${{RELEASE_TAG}}"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: tt_flash-${GITHUB_REF#refs/tags/v}
+          name: tt_flash-${{RELEASE_TAG}}
           path: |
-            ./dist/*
+            ./dist/tt_flash-${{RELEASE_TAG}}
 
   # release:
   #   needs: build
