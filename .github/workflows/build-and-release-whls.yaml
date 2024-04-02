@@ -10,20 +10,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
-        architecture: [x64]
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          architecture: ${{ matrix.architecture }}
-          cache: 'pip'
       
       - name: Install Rust
         run: |
@@ -38,18 +30,9 @@ jobs:
         run: |
           python -m build
 
-      - name: Rename wheel
-        run: |
-          RELEASE_TAG=${GITHUB_REF#refs/tags/v}
-          PYTHON_VERSION=$(echo ${{ matrix.python-version }} | sed 's/\.//')
-          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-          ARCHITECTURE=${{ matrix.architecture }}
-          mv dist/*.whl "dist/tt_flash-${RELEASE_TAG}-py${PYTHON_VERSION}-none-${OS}_${ARCHITECTURE}.whl"
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: tt_flash-whl-${{ matrix.python-version }}-${{ matrix.architecture }}
           path: |
             ./dist/*.whl
 
