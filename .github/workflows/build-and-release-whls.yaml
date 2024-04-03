@@ -1,14 +1,13 @@
----
 name: Build and Release Python Wheels
 
 on:
   release:
     types: [published]
     tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0.0, v2.0.0, ...
-    
+      - 'v*' # Trigger for tags like v1.0, v2.0, ...
+
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -16,60 +15,43 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@v5
-      
-      - name: Install Rust
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        with:
+          python-version: '3.x'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build
+          pip install build twine
 
       - name: Build wheel
         run: |
           python -m build
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          path: |
-            ./dist/*.whl
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          path: artifacts/
-
-      - name: Move Wheel Files
+      - name: Verify wheel files
         run: |
-          mkdir -p wheels
-          find artifacts -name '*.whl' -exec mv {} wheels/ \;
-
-      - name: Upload Wheel Files
-        run: |
-          cd wheels
-          ls -la
-          for wheel in *.whl; do
-            if [ -f "$wheel" ]; then
-              echo "Uploading $wheel"
-              curl -L \
-                -X POST \
-                -H "Accept: application/vnd.github+json" \
-                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                -H "Content-Type: application/octet-stream" \
-                "${{ github.event.release.upload_url }}=$(basename "$wheel")" \
-                --data-binary "@$wheel"
+          twine check dist/*
+          for file in dist/*.whl; do
+            if ! [[ $file =~ .*-py3-none-any.whl$ ]]; then
+              echo "Error: Wheel $file is not marked as pure Python."
+              exit 1
             fi
           done
 
-      # - name: Publish package
-      #   uses: pypa/gh-action-pypi-publish@v1.8.11
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: dist/*.whl
+
+      - name: Upload Wheel Files to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Publish to PyPI
+      #   if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v')
+      #   uses: pypa/gh-action-pypi-publish@v1.4.2
       #   with:
-      #     user: __token__
       #     password: ${{ secrets.PYPI_API_TOKEN }}
+      #     packages_dir: dist
